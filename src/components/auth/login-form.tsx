@@ -1,11 +1,9 @@
-// zod imports
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
-// react hooks
 import { useForm } from "react-hook-form";
+import { useNavigate } from "@tanstack/react-router";
 
-// components
+// Components
 import {
   Form,
   FormControl,
@@ -15,13 +13,18 @@ import {
   FormMessage,
 } from "../ui/form";
 import { CardWrapper } from "./card-wrapper";
-
 import { Button } from "../ui/button";
-import { login } from "@/actions/auth";
-import { loginSchema } from "@/zod/schema";
 import { Input } from "../ui/input";
 
+// Schemas and actions
+import { loginSchema } from "@/zod/schema";
+import { loginUser } from "@/actions/auth";
+import { useAuth } from "@/context/AuthContext";
+
 export const LoginForm = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -30,9 +33,12 @@ export const LoginForm = () => {
     },
   });
 
-  const handleLogin = () => {
-    login(form.getValues()).then((response) => {
-      console.log(response);
+  const handleLogin = async (values: z.infer<typeof loginSchema>) => {
+    const response = await loginUser(values);
+    login(response.user);
+
+    navigate({
+      to: "/about",
     });
   };
 
@@ -45,8 +51,13 @@ export const LoginForm = () => {
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-6">
+          {form.formState.errors.root && (
+            <div className="p-4 mb-4 text-sm text-destructive bg-destructive/15 rounded-md">
+              {form.formState.errors.root.message}
+            </div>
+          )}
+
           <div className="space-y-4">
-            {/* Email */}
             <FormField
               control={form.control}
               name="email"
@@ -58,6 +69,8 @@ export const LoginForm = () => {
                       {...field}
                       type="email"
                       placeholder="example@gmail.com"
+                      disabled={form.formState.isSubmitting}
+                      autoComplete="username"
                     />
                   </FormControl>
                   <FormMessage />
@@ -65,7 +78,6 @@ export const LoginForm = () => {
               )}
             />
 
-            {/* Password */}
             <FormField
               control={form.control}
               name="password"
@@ -73,15 +85,33 @@ export const LoginForm = () => {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input {...field} type="password" placeholder="******" />
+                    <Input
+                      {...field}
+                      type="password"
+                      placeholder="••••••"
+                      disabled={form.formState.isSubmitting}
+                      autoComplete="current-password"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <Button type="submit" variant={"default"} className="w-full">
-              Login
+            <Button
+              type="submit"
+              variant="default"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  Logging in...
+                </span>
+              ) : (
+                "Login"
+              )}
             </Button>
           </div>
         </form>

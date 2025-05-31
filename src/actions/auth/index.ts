@@ -1,10 +1,9 @@
 import axios from "axios";
 import type { z } from "zod";
 import { loginSchema } from "@/zod/schema";
-import { LOGIN_URL } from "@/constant";
+import { AUTH_URL } from "@/constant";
 
-
-export const login = async (values: z.infer<typeof loginSchema>) => {
+export const loginUser = async (values: z.infer<typeof loginSchema>) => {
   const validatedFields = loginSchema.safeParse(values);
 
   if (!validatedFields.success) {
@@ -16,7 +15,7 @@ export const login = async (values: z.infer<typeof loginSchema>) => {
 
   try {
     const response = await axios.post(
-      `${LOGIN_URL}/login`,
+      `${AUTH_URL}/login`,
       validatedFields.data,
       {
         withCredentials: true, // if using cookies (optional)
@@ -29,4 +28,37 @@ export const login = async (values: z.infer<typeof loginSchema>) => {
       error: error.response?.data?.error || "Login failed",
     };
   }
+};
+
+export const logoutUser = async () => {
+  await axios.post(
+    `${AUTH_URL}/logout`,
+    {},
+    {
+      withCredentials: true,
+    }
+  );
+  // No need to clear token manually - handled by server
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const response = await axios.get(`${AUTH_URL}/me`, {
+      withCredentials: true,
+      validateStatus: () => true,
+    });
+
+    if (response.status >= 400) {
+      return { error: response.data?.error || "Unauthorized" };
+    }
+
+    return { user: response.data };
+  } catch (error) {
+    return { error: "Network error" };
+  }
+};
+
+export const verifyAuth = async () => {
+  const { user, error } = await getCurrentUser();
+  return { isAuthenticated: !error, user };
 };
